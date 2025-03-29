@@ -191,7 +191,7 @@ def load_results_data(xls: pd.ExcelFile) -> pd.DataFrame:
 
 
 # Main ETL
-def main(input_file: str, output_dir: str, verbose: bool = False, dry_run: bool = False, skip_metadata: bool = False, skip_summary: bool = False):
+def run_etl(input_file: str, output_dir: str, verbose: bool = False, dry_run: bool = False, skip_metadata: bool = False, skip_summary: bool = False):
     '''
     Main entry point for the ETL pipeline.
 
@@ -314,7 +314,7 @@ if __name__ == "__main__":
     if args.version:
         print(f"ETL Script Version: {ETL_VERSION}")
     else:
-        main(
+        run_etl(
             input_file=args.input,
             output_dir=args.output,
             verbose=args.verbose,

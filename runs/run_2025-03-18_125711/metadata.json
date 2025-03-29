@@ -8,8 +8,100 @@
     "quantification_cycle_method": "Ct",
     "signal_smoothing_on": "true",
     "experiment_run_end_time": "2025-03-18 12:57:11",
-    "samples": [],
-    "replicates": {},
+    "samples": [
+        "miR-126 5E-1 nM",
+        "miR-126 5E-2 nM",
+        "miR-126 5E-3 nM",
+        "miR-126 5E-4 nM",
+        "miR-126 5E-5 nM",
+        "miR-126 Lig NTC",
+        "miR-126 NTC",
+        "miR-145 5E-1 nM",
+        "miR-145 5E-2 nM",
+        "miR-145 5E-4 nM",
+        "miR-145 5E-3 nM",
+        "miR-145 5E-5 nM",
+        "miR-145 Lig NTC",
+        "miR-145 NTC"
+    ],
+    "replicates": {
+        "miR-126 5E-1 nM_3": [
+            "B3",
+            "C3",
+            "D3"
+        ],
+        "miR-126 5E-2 nM_4": [
+            "B4",
+            "C4",
+            "D4"
+        ],
+        "miR-126 5E-3 nM_5": [
+            "B5",
+            "C5",
+            "D5"
+        ],
+        "miR-126 5E-4 nM_6": [
+            "B6",
+            "C6",
+            "D6"
+        ],
+        "miR-126 5E-5 nM_7": [
+            "B7",
+            "C7",
+            "D7"
+        ],
+        "miR-126 Lig NTC_8": [
+            "B8",
+            "C8",
+            "D8"
+        ],
+        "miR-126 NTC_9": [
+            "B9",
+            "C9",
+            "D9"
+        ],
+        "miR-126 NTC_10": [
+            "B10"
+        ],
+        "miR-145 5E-1 nM_3": [
+            "E3",
+            "F3",
+            "G3"
+        ],
+        "miR-145 5E-2 nM_4": [
+            "E4",
+            "F4",
+            "G4"
+        ],
+        "miR-145 5E-4 nM_5": [
+            "E5",
+            "F5",
+            "G5"
+        ],
+        "miR-145 5E-3 nM_6": [
+            "E6",
+            "F6",
+            "G6"
+        ],
+        "miR-145 5E-5 nM_7": [
+            "E7",
+            "F7",
+            "G7"
+        ],
+        "miR-145 Lig NTC_8": [
+            "E8",
+            "F8",
+            "G8"
+        ],
+        "miR-145 NTC_9": [
+            "E9",
+            "F9",
+            "G9"
+        ],
+        "miR-145 NTC_10": [
+            "E10"
+        ]
+    },
     "summary": {
         "melt_curve": {
             "num_wells": 44,
@@ -17,12 +109,22 @@
                 60.000301361083984,
                 94.79798889160156
             ],
-            "unique_targets": []
+            "unique_targets": [
+                "miR-126",
+                "NTC 126",
+                "miR-145",
+                "NTC 145"
+            ]
         },
         "amplification": {
             "num_cycles": 40,
             "num_amplified_wells": 44,
-            "unique_targets": []
+            "unique_targets": [
+                "miR-126",
+                "NTC 126",
+                "miR-145",
+                "NTC 145"
+            ]
         }
     }
 }
