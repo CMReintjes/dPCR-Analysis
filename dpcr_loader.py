@@ -46,7 +46,12 @@ def extract_metadata(df: pd.DataFrame) -> dict:
 
         metadata["chemistry"] = flat_dict.get("Chemistry", metadata["chemistry"])
         metadata["passive_reference"] = flat_dict.get("Passive Reference", metadata["passive_reference"])
-        metadata["date_created"] = flat_dict.get("Date Created", metadata["date_created"])
+        date_created_raw = flat_dict.get("Date Created", metadata["date_created"])
+        if date_created_raw:
+            date_created_clean = re.sub(r"\b(AM|PM|EDT|PST|CST|EST|UTC)\b", "", date_created_raw, flags=re.IGNORECASE).strip()
+            metadata["date_created"] = date_created_clean
+        else:
+            metadata["date_created"] = metadata["date_created"]
         metadata["experiment_type"] = flat_dict.get("Experiment Type", metadata["experiment_type"])
         metadata["quantification_cycle_method"] = flat_dict.get("Quantification Cycle Method", metadata["quantification_cycle_method"])
         metadata["signal_smoothing_on"] = flat_dict.get("Signal Smoothing On", metadata["signal_smoothing_on"])
@@ -55,8 +60,8 @@ def extract_metadata(df: pd.DataFrame) -> dict:
         run_time_str = flat_dict.get("Experiment Run End Time")
         if run_time_str:
             try:
-                # Remove any unrecognized timezone abbreviations like 'EDT'
-                run_time_str = re.sub(r"\b[A-Z]{2,4}\b", "", run_time_str).strip()
+                # Remove any unrecognized timezone abbreviations like 'EDT', 'PST', and AM/PM indicators
+                run_time_str = re.sub(r"\b(AM|PM|EDT|PST|CST|EST|UTC)\b", "", run_time_str, flags=re.IGNORECASE).strip()
                 run_time = pd.to_datetime(run_time_str)
                 metadata["experiment_run_end_time"] = run_time.strftime("%Y-%m-%d %H:%M:%S")
             except Exception:
