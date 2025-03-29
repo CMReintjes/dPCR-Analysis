@@ -1,0 +1,15 @@
+{
+    "block_type": "96-Well 0.1-mL Block",
+    "chemistry": "SYBR_GREEN",
+    "passive_reference": "ROX",
+    "date_created": "2025-03-20 18:29:45 PM EDT",
+    "experiment_type": "Standard Curve",
+    "quantification_cycle_method": "Ct",
+    "signal_smoothing_on": "true",
+    "experiment_run_end_time": "2025-03-18 12:57:11",
+    "calibration": {},
+    "num_wells": 0,
+    "targets_detected": [],
+    "num_amplification_cycles": 0,
+    "created_by_etl_version": "v1.0.0"
+}
