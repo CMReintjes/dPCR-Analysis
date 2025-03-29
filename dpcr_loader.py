@@ -3,6 +3,7 @@ import json
 import argparse
 import pandas as pd
 from datetime import datetime
+import re
 
 # ---- Constants ----
 ETL_VERSION = "v1.0.0"
@@ -25,13 +26,24 @@ DEFAULT_METADATA = {
 }
 
 # ---- Utility Functions ----
-def extract_sample_setup_metadata(df: pd.DataFrame) -> dict:
+def extract_metadata(df: pd.DataFrame) -> dict:
+    '''
+    Extracts metadata from the Sample Setup DataFrame.
+
+    Args:
+        df (pd.DataFrame): DataFrame parsed from the 'Sample Setup' Excel sheet.
+
+    Returns:
+        dict: A dictionary containing extracted metadata fields with default fallbacks.
+    '''
     metadata = DEFAULT_METADATA.copy()
-    
+
     try:
+        # Extract block type from the second column header
+        metadata["block_type"] = df.columns[1] if df.shape[1] > 1 else metadata["block_type"]
+
         flat_dict = dict(zip(df.iloc[:, 0].astype(str).str.strip(), df.iloc[:, 1]))
-        
-        metadata["block_type"] = flat_dict.get("Block Type", metadata["block_type"])
+
         metadata["chemistry"] = flat_dict.get("Chemistry", metadata["chemistry"])
         metadata["passive_reference"] = flat_dict.get("Passive Reference", metadata["passive_reference"])
         metadata["date_created"] = flat_dict.get("Date Created", metadata["date_created"])
@@ -43,6 +55,8 @@ def extract_sample_setup_metadata(df: pd.DataFrame) -> dict:
         run_time_str = flat_dict.get("Experiment Run End Time")
         if run_time_str:
             try:
+                # Remove any unrecognized timezone abbreviations like 'EDT'
+                run_time_str = re.sub(r"\b[A-Z]{2,4}\b", "", run_time_str).strip()
                 run_time = pd.to_datetime(run_time_str)
                 metadata["experiment_run_end_time"] = run_time.strftime("%Y-%m-%d %H:%M:%S")
             except Exception:
@@ -57,6 +71,16 @@ def extract_sample_setup_metadata(df: pd.DataFrame) -> dict:
 
 
 def create_output_dir(run_time: str, base_output: str) -> str:
+    '''
+    Creates a directory for the current run based on timestamp and returns its path.
+
+    Args:
+        run_time (str): The experiment run end time as a formatted string.
+        base_output (str): Base path where the run directory should be created.
+
+    Returns:
+        str: Full path to the created run-specific output directory.
+    '''
     folder_name = f"run_{run_time.replace(':', '').replace(' ', '_')}"
     output_path = os.path.join(base_output, folder_name)
     os.makedirs(output_path, exist_ok=True)
@@ -64,6 +88,13 @@ def create_output_dir(run_time: str, base_output: str) -> str:
 
 
 def save_metadata(metadata: dict, output_path: str):
+    '''
+    Saves metadata dictionary as a JSON file in the specified output directory.
+
+    Args:
+        metadata (dict): Metadata to be saved.
+        output_path (str): Directory where the metadata file will be written.
+    '''
     try:
         metadata_path = os.path.join(output_path, "metadata.json")
         with open(metadata_path, "w") as f:
@@ -74,6 +105,18 @@ def save_metadata(metadata: dict, output_path: str):
 
 
 def load_melt_curve_data(xls: pd.ExcelFile) -> pd.DataFrame:
+    '''
+    Loads and validates the 'Melt Curve Raw Data' sheet from the Excel file.
+
+    Args:
+        xls (pd.ExcelFile): Parsed Excel file object.
+
+    Returns:
+        pd.DataFrame: Cleaned DataFrame containing melt curve measurements.
+
+    Raises:
+        ValueError: If required columns are missing or the sheet is not found.
+    '''
     if "Melt Curve Raw Data" not in xls.sheet_names:
         raise ValueError("'Melt Curve Raw Data' sheet not found.")
 
@@ -90,8 +133,51 @@ def load_melt_curve_data(xls: pd.ExcelFile) -> pd.DataFrame:
     return df
 
 
+def load_amplification_data(xls: pd.ExcelFile) -> pd.DataFrame:
+    '''
+    Loads and validates the 'Amplification Data' sheet from the Excel file.
+
+    Args:
+        xls (pd.ExcelFile): Parsed Excel file object.
+
+    Returns:
+        pd.DataFrame: Cleaned DataFrame containing amplification measurements.
+
+    Raises:
+        ValueError: If required columns are missing or the sheet is not found.
+    '''
+    if "Amplification Data" not in xls.sheet_names:
+        raise ValueError("'Amplification Data' sheet not found.")
+
+    df = xls.parse("Amplification Data")
+    expected_columns = [
+        "Well", "Well Position", "Cycle", "Target Name",
+        "Rn", "Delta Rn"
+    ]
+
+    missing_cols = [col for col in expected_columns if col not in df.columns]
+    if missing_cols:
+        raise ValueError(f"Missing expected columns in Amplification Data: {missing_cols}")
+
+    # Drop rows with missing well or measurement data
+    df.dropna(subset=["Well", "Rn", "Delta Rn"], inplace=True)
+
+    return df
+
+
+
 # ---- Main ETL Runner ----
 def main(input_file: str, output_dir: str, verbose: bool = False, dry_run: bool = False, skip_metadata: bool = False):
+    '''
+    Main entry point for the ETL pipeline.
+
+    Args:
+        input_file (str): Path to the input Excel file.
+        output_dir (str): Directory where output files should be saved.
+        verbose (bool, optional): If True, prints debug info to console.
+        dry_run (bool, optional): If True, processes data without saving outputs.
+        skip_metadata (bool, optional): If True, skips saving metadata.json.
+    '''
     try:
         if not os.path.isfile(input_file):
             raise FileNotFoundError(f"Input file not found: {input_file}")
@@ -101,7 +187,7 @@ def main(input_file: str, output_dir: str, verbose: bool = False, dry_run: bool 
             raise ValueError("'Sample Setup' sheet not found.")
 
         setup_df = xls.parse("Sample Setup")
-        metadata = extract_sample_setup_metadata(setup_df)
+        metadata = extract_metadata(setup_df)
         run_output_dir = create_output_dir(metadata["experiment_run_end_time"], output_dir)
 
         if not skip_metadata and not dry_run:
@@ -111,6 +197,21 @@ def main(input_file: str, output_dir: str, verbose: bool = False, dry_run: bool 
         if verbose:
             print(f"[INFO] Loaded Melt Curve Raw Data with shape: {melt_df.shape}")
             print(melt_df.head())
+
+        if not dry_run:
+            melt_output_path = os.path.join(run_output_dir, "melt_curve_data.csv")
+            melt_df.to_csv(melt_output_path, index=False)
+            print(f"[INFO] Melt Curve data saved to {melt_output_path}")
+
+        amp_df = load_amplification_data(xls)
+        if verbose:
+            print(f"[INFO] Loaded Amplification Data with shape: {amp_df.shape}")
+            print(amp_df.head())
+
+        if not dry_run:
+            amp_output_path = os.path.join(run_output_dir, "amplification_data.csv")
+            amp_df.to_csv(amp_output_path, index=False)
+            print(f"[INFO] Amplification data saved to {amp_output_path}")
 
         print(f"[INFO] Run directory initialized at: {run_output_dir}")
 
