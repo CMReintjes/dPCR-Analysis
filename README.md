@@ -2,7 +2,7 @@
 
 ## Usage
 
-```python dpcr_etl_setup.py -i inputs/input.xlsx```
+```python dpcr_loader.py -i inputs/input.xlsx```
 
 ### CLI Arguments
 
