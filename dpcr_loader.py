@@ -10,6 +10,7 @@ ETL_VERSION = "v1.0.0"
 DEFAULT_INPUT_DIR = "inputs"
 DEFAULT_OUTPUT_DIR = "runs"
 DEFAULT_METADATA = {
+    "created_by_etl_version": ETL_VERSION,
     "block_type": "Unknown",
     "chemistry": "Not specified",
     "passive_reference": "None",
@@ -22,7 +23,7 @@ DEFAULT_METADATA = {
     #"num_wells": 0,
     #"targets_detected": [],
     #"num_amplification_cycles": 0,
-    "created_by_etl_version": ETL_VERSION
+    "samples": []
 }
 
 # Metadata Extraction
@@ -170,6 +171,25 @@ def load_amplification_data(xls: pd.ExcelFile) -> pd.DataFrame:
     return df
 
 
+# Load Results Data
+def load_results_data(xls: pd.ExcelFile) -> pd.DataFrame:
+    '''
+    Loads and returns the results table from the 'Results' sheet starting around row 35.
+
+    Args:
+        xls (pd.ExcelFile): Excel file object.
+
+    Returns:
+        pd.DataFrame: Cleaned results DataFrame.
+    '''
+    if "Results" not in xls.sheet_names:
+        raise ValueError("'Results' sheet not found.")
+
+    df = xls.parse("Results", skiprows=35)
+    df = df.dropna(how="all")  # Drop fully empty rows
+    return df
+
+
 # Main ETL
 def main(input_file: str, output_dir: str, verbose: bool = False, dry_run: bool = False, skip_metadata: bool = False, skip_summary: bool = False):
     '''
@@ -192,10 +212,22 @@ def main(input_file: str, output_dir: str, verbose: bool = False, dry_run: bool 
 
         setup_df = xls.parse("Sample Setup")
         metadata = extract_metadata(setup_df)
+
+        # Load additional sample name info from extended Sample Setup table
+        try:
+            sample_setup_extended = xls.parse("Sample Setup", skiprows=35)
+            if "Sample Name" in sample_setup_extended.columns:
+                unique_sample_names = sample_setup_extended["Sample Name"].dropna().unique().tolist()
+                metadata["samples"] = unique_sample_names
+                if verbose:
+                    print(f"[INFO] Found {len(unique_sample_names)} unique sample names.")
+        except Exception as e:
+            print(f"[WARN] Could not extract sample names from extended Sample Setup: {e}")
         run_output_dir = create_output_dir(metadata["experiment_run_end_time"], output_dir)
 
         melt_df = load_melt_curve_data(xls)
         amp_df = load_amplification_data(xls)
+        results_df = load_results_data(xls)
 
         if not skip_summary:
             metadata["summary"] = {
@@ -211,10 +243,10 @@ def main(input_file: str, output_dir: str, verbose: bool = False, dry_run: bool 
                 }
             }
 
+        # Melt Curve Sheet
         if not skip_metadata and not dry_run:
             save_metadata(metadata, run_output_dir)
 
-        melt_df = load_melt_curve_data(xls)
         if verbose:
             print(f"[INFO] Loaded Melt Curve Raw Data with shape: {melt_df.shape}")
             print(melt_df.head())
@@ -224,7 +256,7 @@ def main(input_file: str, output_dir: str, verbose: bool = False, dry_run: bool 
             melt_df.to_csv(melt_output_path, index=False)
             print(f"[INFO] Melt Curve data saved to {melt_output_path}")
 
-        amp_df = load_amplification_data(xls)
+        # Amplification Sheet
         if verbose:
             print(f"[INFO] Loaded Amplification Data with shape: {amp_df.shape}")
             print(amp_df.head())
@@ -234,8 +266,17 @@ def main(input_file: str, output_dir: str, verbose: bool = False, dry_run: bool 
             amp_df.to_csv(amp_output_path, index=False)
             print(f"[INFO] Amplification data saved to {amp_output_path}")
 
-        print(f"[INFO] Run directory initialized at: {run_output_dir}")
+        # Results Sheet
+        if verbose:
+            print(f"[INFO] Loaded Results Data with shape: {results_df.shape}")
+            #print(results_df.info())
 
+        if not dry_run:
+            results_output_path = os.path.join(run_output_dir, "results_table.csv")
+            results_df.to_csv(results_output_path, index=False)
+            print(f"[INFO] Results data saved to {results_output_path}")
+
+        print(f"[INFO] Run directory initialized at: {run_output_dir}")
     except Exception as e:
         print(f"[ERROR] ETL process failed: {e}")
 
