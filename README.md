@@ -1,14 +1,14 @@
 # dPCR-Analysis
 
-You can now run your ETL pipeline directly from the command line like this:
+## Usage
 
-```python dpcr_etl_setup.py -i inputs/Paola-Run1.xlsx --verbose```
+```python dpcr_etl_setup.py -i inputs/input.xlsx```
 
-## Available CLI Options
+### CLI Arguments
 
 `-i, --input`: Path to the .xlsx file (defaults to inputs/input.xlsx)
 
-`-o, --output`: Base output directory (defaults to output/)
+`-o, --output`: Base output directory (defaults to runs/)
 
 `-v, --version`: Print the script version and exit
 
