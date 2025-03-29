@@ -4,7 +4,7 @@ You can now run your ETL pipeline directly from the command line like this:
 
 ```python dpcr_etl_setup.py -i inputs/Paola-Run1.xlsx --verbose```
 
-## Available CLI Options:
+## Available CLI Options
 
 `-i, --input`: Path to the .xlsx file (defaults to inputs/input.xlsx)
 
