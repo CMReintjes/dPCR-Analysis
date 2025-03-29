@@ -216,11 +216,28 @@ def main(input_file: str, output_dir: str, verbose: bool = False, dry_run: bool 
         # Load additional sample name info from extended Sample Setup table
         try:
             sample_setup_extended = xls.parse("Sample Setup", skiprows=35)
-            if "Sample Name" in sample_setup_extended.columns:
+            if "Sample Name" in sample_setup_extended.columns and "Well Position" in sample_setup_extended.columns:
+                # Store sample names
                 unique_sample_names = sample_setup_extended["Sample Name"].dropna().unique().tolist()
                 metadata["samples"] = unique_sample_names
+
+                # Build replicate groupings
+                replicate_map = {}
+                for _, row in sample_setup_extended.dropna(subset=["Sample Name", "Well Position"]).iterrows():
+                    sample = row["Sample Name"]
+                    well = row["Well Position"]
+                    match = re.match(r"([A-Z]+)(\d+)", str(well).strip(), re.IGNORECASE)
+                    if match:
+                        row_num = match.group(2)
+                        group_key = f"{sample}_{row_num}"
+                        replicate_map.setdefault(group_key, []).append(well)
+
+                metadata["replicates"] = replicate_map
+
                 if verbose:
                     print(f"[INFO] Found {len(unique_sample_names)} unique sample names.")
+                    print(f"[INFO] Built {len(replicate_map)} replicate groups.")
+
         except Exception as e:
             print(f"[WARN] Could not extract sample names from extended Sample Setup: {e}")
         run_output_dir = create_output_dir(metadata["experiment_run_end_time"], output_dir)
