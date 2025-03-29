@@ -15,16 +15,29 @@ def load_metadata(run_dir):
 
 
 def main(args):
-    if args.replicate_average and args.runs:
-        df = load_multiple_runs(args.runs, data_type=args.data_type)
-        metadata = load_metadata(args.runs[0])
-        replicates = metadata.get("replicates", {})
-        id_col = "Temperature" if args.data_type == "melt" else "Cycle"
-        print(id_col)
-        value_columns = ["Fluorescence"] if args.data_type == "melt" else ["Delta Rn"]
-        avg = process_replicate_wells(df, replicates, id_col, value_columns)
-        avg.to_csv(args.output, index=False)
-        print(f"[INFO] Saved replicate-averaged data to {args.output}")
+    if args.runs:
+        combined_df = load_multiple_runs(args.runs, data_type=args.data_type)
+        if args.replicate_average:
+            id_col = "Temperature" if args.data_type == "melt" else "Cycle"
+            value_columns = ["Fluorescence"] if args.data_type == "melt" else ["Delta Rn"]
+
+            dfs = []
+            for run_dir in args.runs:
+                run_df = combined_df[combined_df['run_id'] == os.path.basename(run_dir)]
+                run_metadata = load_metadata(run_dir)
+                run_replicates = run_metadata.get("replicates", {})
+                run_date = run_metadata.get("experiment_run_end_time", None)
+
+                averaged = process_replicate_wells(run_df, run_replicates, id_col, value_columns)
+                if run_date:
+                    averaged.insert(0, 'Run Date', run_date)
+
+                dfs.append(averaged)
+
+            final_df = pd.concat(dfs, ignore_index=True)
+            final_df.to_csv(args.output, index=False)
+            print(f"[INFO] Saved replicate-averaged data to {args.output}")
+
 
 
 # Command Line Arguments

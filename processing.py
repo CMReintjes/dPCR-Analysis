@@ -17,7 +17,7 @@ def process_replicate_wells(df: pd.DataFrame, replicates: Dict[str, List[str]], 
         pd.DataFrame: Averages and std of values per replicate group and ID column.
     '''
     results = []
-    print(replicates.items())
+    #print(replicates.items())
     for group, wells in replicates.items():
         #print(group)
         subset = df[df['Well Position'].isin(wells)]
@@ -29,7 +29,7 @@ def process_replicate_wells(df: pd.DataFrame, replicates: Dict[str, List[str]], 
         grouped.columns = ['Reading', id_col] + [f"{col}_{stat}" for col in value_columns for stat in ['mean', 'std']]
         grouped['Replicate Group'] = group
         results.append(grouped)
-        print(results)
+        #print(results)
 
     return pd.concat(results, ignore_index=True) if results else pd.DataFrame()
 
