@@ -4,6 +4,7 @@ import json
 import pandas as pd
 from loader import ETL_VERSION, DEFAULT_INPUT_DIR, run_etl
 from processing import load_multiple_runs, process_replicate_wells
+from plotter import plot_melt_curve
 
 
 def load_metadata(run_dir):
@@ -19,7 +20,7 @@ def main(args):
         combined_df = load_multiple_runs(args.runs, data_type=args.data_type)
         if args.replicate_average:
             id_col = "Temperature" if args.data_type == "melt" else "Cycle"
-            value_columns = ["Fluorescence"] if args.data_type == "melt" else ["Delta Rn"]
+            value_columns = ["Derivative"] if args.data_type == "melt" else ["Delta Rn"]
 
             dfs = []
             for run_dir in args.runs:
@@ -37,6 +38,7 @@ def main(args):
             final_df = pd.concat(dfs, ignore_index=True)
             final_df.to_csv(args.output, index=False)
             print(f"[INFO] Saved replicate-averaged data to {args.output}")
+            plot_melt_curve(final_df, "plots\\")  
 
 
 
@@ -60,6 +62,7 @@ if __name__ == "__main__":
     # General
     parser.add_argument("--version", action="store_true", help="Show ETL version and exit")
     parser.add_argument("--verbose", action="store_true", help="Enable verbose output")
+    parser.add_argument("--plot", action="store_true", help="Show plotting menu")
 
     args = parser.parse_args()
 
