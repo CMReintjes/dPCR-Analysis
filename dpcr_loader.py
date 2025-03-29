@@ -5,7 +5,7 @@ import pandas as pd
 from datetime import datetime
 import re
 
-# ---- Constants ----
+# Constants
 ETL_VERSION = "v1.0.0"
 DEFAULT_INPUT_DIR = "inputs"
 DEFAULT_OUTPUT_DIR = "runs"
@@ -18,14 +18,14 @@ DEFAULT_METADATA = {
     "quantification_cycle_method": "Standard",
     "signal_smoothing_on": False,
     "experiment_run_end_time": None,
-    "calibration": {},
-    "num_wells": 0,
-    "targets_detected": [],
-    "num_amplification_cycles": 0,
+    #"calibration": {},
+    #"num_wells": 0,
+    #"targets_detected": [],
+    #"num_amplification_cycles": 0,
     "created_by_etl_version": ETL_VERSION
 }
 
-# ---- Utility Functions ----
+# Metadata Extraction
 def extract_metadata(df: pd.DataFrame) -> dict:
     '''
     Extracts metadata from the Sample Setup DataFrame.
@@ -165,9 +165,8 @@ def load_amplification_data(xls: pd.ExcelFile) -> pd.DataFrame:
     return df
 
 
-
-# ---- Main ETL Runner ----
-def main(input_file: str, output_dir: str, verbose: bool = False, dry_run: bool = False, skip_metadata: bool = False):
+# Main ETL
+def main(input_file: str, output_dir: str, verbose: bool = False, dry_run: bool = False, skip_metadata: bool = False, skip_summary: bool = False):
     '''
     Main entry point for the ETL pipeline.
 
@@ -189,6 +188,23 @@ def main(input_file: str, output_dir: str, verbose: bool = False, dry_run: bool 
         setup_df = xls.parse("Sample Setup")
         metadata = extract_metadata(setup_df)
         run_output_dir = create_output_dir(metadata["experiment_run_end_time"], output_dir)
+
+        melt_df = load_melt_curve_data(xls)
+        amp_df = load_amplification_data(xls)
+
+        if not skip_summary:
+            metadata["summary"] = {
+                "melt_curve": {
+                    "num_wells": melt_df['Well'].nunique(),
+                    "temperature_range": [melt_df['Temperature'].min(), melt_df['Temperature'].max()],
+                    "unique_targets": melt_df['Target Name'].dropna().unique().tolist()
+                },
+                "amplification": {
+                    "num_cycles": amp_df['Cycle'].max() if not amp_df.empty else 0,
+                    "num_amplified_wells": amp_df['Well'].nunique(),
+                    "unique_targets": amp_df['Target Name'].dropna().unique().tolist()
+                }
+            }
 
         if not skip_metadata and not dry_run:
             save_metadata(metadata, run_output_dir)
@@ -219,7 +235,7 @@ def main(input_file: str, output_dir: str, verbose: bool = False, dry_run: bool 
         print(f"[ERROR] ETL process failed: {e}")
 
 
-# ---- CLI Entry Point ----
+# Command Line Arguments
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="ETL pipeline for dPCR Excel files.")
     parser.add_argument("-i", "--input", type=str, default=os.path.join(DEFAULT_INPUT_DIR, "input.xlsx"), help="Path to the input Excel file")
@@ -228,6 +244,7 @@ if __name__ == "__main__":
     parser.add_argument("--verbose", action="store_true", help="Enable verbose output")
     parser.add_argument("--dry-run", action="store_true", help="Run without saving any output")
     parser.add_argument("--skip-metadata", action="store_true", help="Skip saving metadata.json")
+    parser.add_argument("--skip-summary", action="store_true", help="Skip loading additional summary stats in metadata.json")
 
     args = parser.parse_args()
 
@@ -239,5 +256,6 @@ if __name__ == "__main__":
             output_dir=args.output,
             verbose=args.verbose,
             dry_run=args.dry_run,
-            skip_metadata=args.skip_metadata
+            skip_metadata=args.skip_metadata,
+            skip_summary=args.skip_summary
         )
