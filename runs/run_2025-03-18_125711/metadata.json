@@ -7,9 +7,5 @@
     "quantification_cycle_method": "Ct",
     "signal_smoothing_on": "true",
     "experiment_run_end_time": "2025-03-18 12:57:11",
-    "calibration": {},
-    "num_wells": 0,
-    "targets_detected": [],
-    "num_amplification_cycles": 0,
     "created_by_etl_version": "v1.0.0"
 }
