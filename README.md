@@ -1,4 +1,6 @@
-# dPCR-Analysis
+# qPCR-Analysis
+
+qPCR Analysis Script based on ThermoFisher QuantStudio Machines
 
 ## Usage
 
